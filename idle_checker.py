@@ -104,7 +104,7 @@ class Idle_Checker:
             self.logger.info(f"Computer has passed resource checks. (Total number of checks: {total_checks})")
             return False
         elif total_checks >= self.MAXIMUM_RESOURCE_CHECKS:  # Total number of checks exceeded
-            self.logger.warning(f"Computer has reached maximum number of allowed checks. (Total number of checks: {total_checks}")
+            self.logger.warning(f"Computer has reached maximum number of allowed checks. (Total number of checks: {total_checks})")
             return False
         else:  # Other error catcher
             self.logger.error(f"An unknown error has occured in resource checks. (Total number of checks: {total_checks})")
