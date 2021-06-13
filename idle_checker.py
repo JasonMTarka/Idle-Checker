@@ -1,7 +1,7 @@
 import os
 import sys
 import psutil
-import pyautogui
+import win32api
 import boto3
 import logging
 from time import sleep
@@ -35,7 +35,7 @@ class Idle_Checker:
 
         self.ELAPSED_TIME = 0  # Rough elapsed time the program has been running
         self.RUNNING_DURATION = 60 * 60 * 4  # Total allowed running length of program - last digit is # of hours
-        self.SLEEP_MODE_LENGTH = 600  # 600 seconds = 10 minutes; time during Sleep Mode between resource check
+        self.SLEEP_MODE_LENGTH = 900  # 900 seconds = 15 minutes; duration of Sleep Mode between resource check
 
         self.CPU_THRESHOLD = 30  # Maximum for acceptable CPU usage, in %
         self.MEMORY_THRESHOLD = 50  # Maximum for acceptable RAM usage, in %
@@ -44,7 +44,7 @@ class Idle_Checker:
         self.MAXIMUM_RESOURCE_CHECKS = 10  # Failsafe value in case checks keep rebounding between active and inactive
 
         self.PRESENCE_WAIT_TIME = 6  # Number of seconds between presence checks
-        self.PRESENCE_CHECK_COUNT = 60  # Number of checks for user presence; with wait time of 6 seconds, 10 checks equals 1 minute
+        self.PRESENCE_CHECK_COUNT = 150  # Number of checks for user presence; with wait time of 6 seconds, 10 checks = 1 minute
 
         if self.debug:  # Sets some constant values lower for debugging purposes
             self.RUNNING_DURATION = 30
@@ -52,6 +52,8 @@ class Idle_Checker:
             self.SLEEP_MODE_LENGTH = 5
             self.PRESENCE_WAIT_TIME = 2
             self.PRESENCE_CHECK_COUNT = 5
+
+        self.logger.info("Initial setup complete.")
 
     def main(self) -> None:
 
@@ -61,12 +63,14 @@ class Idle_Checker:
             self.ELAPSED_TIME += self.SLEEP_MODE_LENGTH
             sleep(self.SLEEP_MODE_LENGTH)
 
+        self.logger.info("Beginning main loop.")
+
         while self.running and self.ELAPSED_TIME <= self.RUNNING_DURATION:
-            if self.resource_utilization():  # Checks if resources are being heavily utilized
-                if self.presence():  # Checks if user is present
-                    sleep_mode()
-                else:
+            if not self.presence():  # Checks if user is present
+                if self.resource_utilization():  # Checks resource utilization
                     self.send_notification()  # If resources are being utilized and user is not present, AWS SNS sends a notification email and ends the loop
+                else:
+                    sleep_mode()
             else:
                 sleep_mode()
 
@@ -112,12 +116,12 @@ class Idle_Checker:
 
     def presence(self) -> bool:
 
-        mouse_x, mouse_y = pyautogui.position()
+        mouse_x, mouse_y = win32api.GetCursorPos()
 
         for _ in range(self.PRESENCE_CHECK_COUNT):
             sleep(self.PRESENCE_WAIT_TIME)
             self.logger.info("Checking for user presence...")
-            mouse_new_x, mouse_new_y = pyautogui.position()
+            mouse_new_x, mouse_new_y = win32api.GetCursorPos()
             if mouse_new_x != mouse_x or mouse_new_y != mouse_y:
                 self.logger.info("Activity detected.")
                 return True
@@ -129,7 +133,7 @@ class Idle_Checker:
 
         self.logger.info("Sending notification via AWS SNS...")
 
-        if self.debug is False:
+        if not self.debug:
             client = boto3.client(
                 "sns",
                 aws_access_key_id=os.environ.get("AWS-Python-Access-Key-ID"),
