@@ -64,6 +64,8 @@ class Idle_Usage_Checker:
             self.ELAPSED_TIME += self.SLEEP_MODE_LENGTH
             sleep(self.SLEEP_MODE_LENGTH)
 
+        if self.debug:
+            self.logger.info("***** Debugging Mode *****")
         self.logger.info("Beginning main loop.")
         total_passed_resource_checks = 0
 
@@ -157,10 +159,33 @@ class Idle_Usage_Checker:
 
 def main():
 
-    debug = False
-    for cl_arg in sys.argv[1:]:
-        if cl_arg == "--debug" or cl_arg == "-d":
-            debug = True
+    def cmd_line_arg_handler() -> dict:
+
+        opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
+
+        cmd_line_args = {"debug": False}
+
+        if opts:
+
+            if "-h" in opts or "--help" in opts:
+                print("'Idle Usage Checker' by Jason Tarka")
+                print("Accepted command line arguments:")
+                print('"-d" - Enter debugging mode')
+                print('"-v" - Display version information')
+                sys.exit()
+
+            if "-v" in opts or "--version" in opts:
+                print("Application version: 1.0.0")
+                print(f"Python version: {sys.version}")
+                sys.exit()
+
+            if "-d" in opts or "--debug" in opts:
+                cmd_line_args["debug"] = True
+
+        return cmd_line_args
+
+    debug = cmd_line_arg_handler().get("debug")
+    assert type(debug) is bool
 
     checker = Idle_Usage_Checker(debug=debug)
     checker.main()
