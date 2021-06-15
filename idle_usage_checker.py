@@ -4,7 +4,9 @@ import psutil
 import win32api
 import boto3
 import logging
+
 from time import sleep
+from typing import TYPE_CHECKING
 
 
 class Idle_Usage_Checker:
@@ -185,7 +187,8 @@ def main():
         return cmd_line_args
 
     debug = cmd_line_arg_handler().get("debug")
-    assert type(debug) is bool
+    if TYPE_CHECKING:
+        assert type(debug) is bool
 
     checker = Idle_Usage_Checker(debug=debug)
     checker.main()
