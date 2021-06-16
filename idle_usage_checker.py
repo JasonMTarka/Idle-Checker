@@ -6,7 +6,6 @@ import boto3
 import logging
 
 from time import sleep
-from typing import TYPE_CHECKING
 
 
 class Idle_Usage_Checker:
@@ -36,8 +35,8 @@ class Idle_Usage_Checker:
         self.running = True
 
         self.ELAPSED_TIME = 0  # Rough elapsed time the program has been running
-        self.RUNNING_DURATION = 60 * 60 * 4  # (seconds * minutes * hours) Total allowed running length of program; incremented by sleep_mode()
-        self.SLEEP_MODE_LENGTH = 900  # 900 seconds = 15 minutes; duration of Sleep Mode between resource check
+        self.RUNNING_DURATION = 60 * 60 * 4  # (seconds * minutes * hours) - Total allowed running length of program; incremented by sleep_mode()
+        self.SLEEP_MODE_LENGTH = 60 * 15  # (seconds * minutes) - Duration of Sleep Mode between resource check
 
         self.CPU_THRESHOLD = 30  # Maximum for acceptable CPU usage, in %
         self.MEMORY_THRESHOLD = 55  # Maximum for acceptable RAM usage, in %
@@ -159,7 +158,7 @@ class Idle_Usage_Checker:
         self.running = False
 
 
-def main():
+def main() -> None:
 
     def cmd_line_arg_handler() -> dict:
 
@@ -187,8 +186,6 @@ def main():
         return cmd_line_args
 
     debug = cmd_line_arg_handler().get("debug")
-    if TYPE_CHECKING:
-        assert type(debug) is bool
 
     checker = Idle_Usage_Checker(debug=debug)
     checker.main()
