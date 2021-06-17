@@ -11,8 +11,10 @@ from time import sleep
 class Idle_Usage_Checker:
 
     def __init__(self, **kwargs) -> None:
+        """Set instance constants and logger object."""
 
         def logger_setup() -> logging.Logger:
+            """Create and configure logger object."""
 
             logger = logging.getLogger(__name__)
             logger.setLevel(logging.INFO)
@@ -32,7 +34,7 @@ class Idle_Usage_Checker:
 
         self.debug = kwargs.get("debug")
         self.logger = logger_setup()
-        self.running = True
+        self.last_action = win32api.GetLastInputInfo()
 
         self.ELAPSED_TIME = 0  # Rough elapsed time the program has been running
         self.RUNNING_DURATION = 60 * 60 * 4  # (seconds * minutes * hours) - Total allowed running length of program; incremented by sleep_mode()
@@ -48,7 +50,7 @@ class Idle_Usage_Checker:
         self.PRESENCE_WAIT_TIME = 60  # Number of seconds between presence checks
         self.PRESENCE_CHECK_COUNT = 15  # Number of checks for user presence; with PRESENCE_WAIT_TIME of 60, 15 checks = 15 minutes
 
-        if self.debug:  # Sets some constant values lower for debugging purposes
+        if self.debug:  # Sets some constant values for debugging purposes
             self.RUNNING_DURATION = 30
             self.CPU_THRESHOLD = 10
             self.SLEEP_MODE_LENGTH = 5
@@ -57,9 +59,11 @@ class Idle_Usage_Checker:
 
         self.logger.info("Initial setup complete.")
 
-    def main(self) -> None:
+    def begin(self) -> None:
+        """Main loop for usage checking."""
 
         def sleep_mode() -> None:
+            """Start idle state after user activity detection or resource check."""
 
             self.logger.info(f"Entering sleep mode... ({self.SLEEP_MODE_LENGTH} seconds)")
             self.ELAPSED_TIME += self.SLEEP_MODE_LENGTH
@@ -67,32 +71,47 @@ class Idle_Usage_Checker:
 
         if self.debug:
             self.logger.info("***** Debugging Mode *****")
+
         self.logger.info("Beginning main loop.")
         total_passed_resource_checks = 0
 
-        while self.running and self.ELAPSED_TIME <= self.RUNNING_DURATION and total_passed_resource_checks < self.MAXIMUM_PASSED_CHECKS:
+        while self.ELAPSED_TIME <= self.RUNNING_DURATION:
             self.logger.info("Checking for user presence...")
+
             if not self.presence():  # Checks if user is present (self.presence returns True if present)
                 if self.resource_utilization():  # Checks resource utilization
                     self.send_notification()  # If resources are being utilized and user is not present, AWS SNS sends a notification email and ends the loop
                 else:
                     total_passed_resource_checks += 1
+                    if total_passed_resource_checks >= self.MAXIMUM_PASSED_CHECKS:
+                        self.close_program(message="Total passed resource checks have reached allowed maximum.")
                     sleep_mode()
             else:
                 total_passed_resource_checks = 0  # Resets number of passed resorce checks if user presence is detected
                 sleep_mode()
 
+        self.close_program(message="Maximum running duration reached.")
+
+    def close_program(self, message="") -> None:
+        """Log closing messages and exit program."""
+
+        if message:
+            self.logger.info(message)
         self.logger.info("Closing program...")
+        sys.exit()
 
     def update_resources(self) -> None:
+        """Get most recent resource levels."""
 
         self.cpu, self.memory = (psutil.cpu_percent(interval=0.6), psutil.virtual_memory().percent)
-        self.logger.info(f"CPU usage is at {self.cpu}% and memory usage is at {self.memory}%.")
+        self.logger.debug(f"CPU usage is at {self.cpu}% and memory usage is at {self.memory}%.")
 
     def resource_utilization(self) -> bool:
+        """Check for resource utilization."""
 
         resource_counter = 0
         total_checks = 0
+        self.logger.info("Starting resource checks...")
 
         while resource_counter < self.RESOURCE_CHECKS and resource_counter > -self.RESOURCE_CHECKS and total_checks < self.MAXIMUM_RESOURCE_CHECKS:
 
@@ -100,12 +119,12 @@ class Idle_Usage_Checker:
             self.update_resources()
 
             if self.cpu >= self.CPU_THRESHOLD or self.memory >= self.MEMORY_THRESHOLD:
-                self.logger.info(f"Resources are being heavily utilized. (Maximum CPU usage allowed: {self.CPU_THRESHOLD}%, Maximum RAM usage allowed: {self.MEMORY_THRESHOLD}%)")
+                self.logger.debug(f"Resources are being heavily utilized. (Maximum CPU usage allowed: {self.CPU_THRESHOLD}%, Maximum RAM usage allowed: {self.MEMORY_THRESHOLD}%)")
                 resource_counter += 1
                 total_checks += 1
 
             else:
-                self.logger.info(f"Resources not being heavily utilized. (Maximum CPU usage allowed: {self.CPU_THRESHOLD}%, Maximum RAM usage allowed: {self.MEMORY_THRESHOLD}%)")
+                self.logger.debug(f"Resources not being heavily utilized. (Maximum CPU usage allowed: {self.CPU_THRESHOLD}%, Maximum RAM usage allowed: {self.MEMORY_THRESHOLD}%)")
                 resource_counter -= 1
                 total_checks += 1
 
@@ -123,21 +142,22 @@ class Idle_Usage_Checker:
             return False
 
     def presence(self) -> bool:
-
-        mouse_x, mouse_y = win32api.GetCursorPos()
+        """Check for user presence."""
 
         for _ in range(self.PRESENCE_CHECK_COUNT):
-            sleep(self.PRESENCE_WAIT_TIME)
-            self.logger.debug("Checking for user presence...")
-            mouse_new_x, mouse_new_y = win32api.GetCursorPos()
-            if mouse_new_x != mouse_x or mouse_new_y != mouse_y:
+
+            new_action = win32api.GetLastInputInfo()
+            if new_action != self.last_action:
                 self.logger.info("Activity detected.")
+                self.last_action = new_action
                 return True
+            sleep(self.PRESENCE_WAIT_TIME)
 
         self.logger.info("User does not seem to be present.")
         return False
 
     def send_notification(self) -> None:
+        """Send computer usage notification via AWS SNS."""
 
         self.logger.info("Sending notification via AWS SNS...")
 
@@ -155,12 +175,14 @@ class Idle_Usage_Checker:
                 Subject="Idle Checker Notification",
             )
 
-        self.running = False
+        self.close_program(message="Notification has been sent.")
 
 
 def main() -> None:
+    """Start application."""
 
     def cmd_line_arg_handler() -> dict:
+        """Handle command line arguments."""
 
         opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
 
@@ -188,7 +210,7 @@ def main() -> None:
     debug = cmd_line_arg_handler().get("debug")
 
     checker = Idle_Usage_Checker(debug=debug)
-    checker.main()
+    checker.begin()
 
 
 if __name__ == "__main__":
