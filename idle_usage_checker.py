@@ -46,7 +46,7 @@ class Idle_Usage_Checker:
         self.ELAPSED_TIME = 0
         # Rough elapsed time the program has been running
         self.RUNNING_DURATION = 60 * 60 * 4  # (seconds * minutes * hours)
-        # Total allowed running length of program; incremented by sleep_mode()
+        # Total allowed running length of program; incremented by sleep_mode
         self.SLEEP_MODE_LENGTH = 60 * 8
         # (seconds * minutes) - Duration of Sleep Mode between resource check
 
@@ -111,6 +111,7 @@ class Idle_Usage_Checker:
                     # AWS SNS sends a notification email and ends the loop
                 else:
                     total_passed_resource_checks += 1
+
                     if total_passed_resource_checks >= self.MAX_PASSED_CHECKS:
                         self.close_program(
                             message=("Total passed resource checks have "
@@ -241,9 +242,10 @@ class Idle_Usage_Checker:
             client.publish(
                 TopicArn=os.environ.get(
                     "AWS-Python-Idle-Checker-TopicArn"),
-                Message=f"Your CPU usage was recorded at {self.cpu}% "
-                "and your RAM usage was recorded at {self.memory}%. "
-                " Did you leave a task running?",
+                Message=(
+                    f"Your CPU usage was recorded at {self.cpu}% "
+                    "and your RAM usage was recorded at {self.memory}%. "
+                    " Did you leave a task running?"),
                 Subject="Idle Checker Notification",
             )
 
