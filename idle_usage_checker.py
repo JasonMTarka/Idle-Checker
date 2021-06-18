@@ -157,7 +157,6 @@ class Idle_Usage_Checker:
 
             if (self.cpu >= self.CPU_THRESHOLD
                     or self.memory >= self.MEMORY_THRESHOLD):
-
                 verb = "are"
                 resource_counter += 1
                 total_checks += 1
