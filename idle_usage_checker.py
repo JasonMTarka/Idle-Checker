@@ -38,7 +38,7 @@ class Idle_Usage_Checker:
 
         self.ELAPSED_TIME = 0  # Rough elapsed time the program has been running
         self.RUNNING_DURATION = 60 * 60 * 4  # (seconds * minutes * hours) - Total allowed running length of program; incremented by sleep_mode()
-        self.SLEEP_MODE_LENGTH = 60 * 15  # (seconds * minutes) - Duration of Sleep Mode between resource check
+        self.SLEEP_MODE_LENGTH = 60 * 8  # (seconds * minutes) - Duration of Sleep Mode between resource check
 
         self.CPU_THRESHOLD = 30  # Maximum for acceptable CPU usage, in %
         self.MEMORY_THRESHOLD = 55  # Maximum for acceptable RAM usage, in %
@@ -57,6 +57,7 @@ class Idle_Usage_Checker:
             self.PRESENCE_WAIT_TIME = 2
             self.PRESENCE_CHECK_COUNT = 5
 
+        self.logger.info("**********")
         self.logger.info("Initial setup complete.")
 
     def begin(self) -> None:
