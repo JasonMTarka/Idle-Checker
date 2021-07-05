@@ -47,7 +47,7 @@ class Idle_Usage_Checker:
         # Rough elapsed time the program has been running
         self.RUNNING_DURATION = 60 * 60 * 4  # (seconds * minutes * hours)
         # Total allowed running length of program; incremented by sleep_mode
-        self.SLEEP_MODE_LENGTH = 60 * 8
+        self.SLEEP_MODE_LENGTH = 60 * 6
         # (seconds * minutes) - Duration of Sleep Mode between resource check
 
         self.CPU_THRESHOLD = 30
@@ -65,7 +65,7 @@ class Idle_Usage_Checker:
 
         self.PRESENCE_WAIT_TIME = 60
         # Number of seconds between presence checks
-        self.PRESENCE_CHECK_COUNT = 15
+        self.PRESENCE_CHECK_COUNT = 12
         # Number of checks for user presence;
         # With PRESENCE_WAIT_TIME of 60, 15 checks = 15 minutes
 
@@ -89,7 +89,8 @@ class Idle_Usage_Checker:
             """Start idle state after activity detection / resource check."""
 
             self.logger.info(
-                f"Entering sleep mode... ({self.SLEEP_MODE_LENGTH} seconds)")
+                f"Entering sleep mode... "
+                "({self.SLEEP_MODE_LENGTH/60} minutes)")
             self.ELAPSED_TIME += self.SLEEP_MODE_LENGTH
             sleep(self.SLEEP_MODE_LENGTH)
 
@@ -124,7 +125,7 @@ class Idle_Usage_Checker:
 
         self.close_program(message="Maximum running duration reached.")
 
-    def close_program(self, message="") -> None:
+    def close_program(self, message: str = "") -> None:
         """Log closing messages and exit program."""
 
         if message:
@@ -244,7 +245,9 @@ class Idle_Usage_Checker:
                     "AWS-Python-Idle-Checker-TopicArn"),
                 Message=(
                     f"Your CPU usage was recorded at {self.cpu}% "
-                    "and your RAM usage was recorded at {self.memory}%. "
+                    f"and your RAM usage was recorded at {self.memory}%. "
+                    "Allowed maximums: "
+                    f"CPU: {self.CPU_THRESHOLD}% RAM: {self.MEMORY_THRESHOLD}%"
                     " Did you leave a task running?"),
                 Subject="Idle Checker Notification",
             )
