@@ -7,6 +7,11 @@ import logging
 
 from time import sleep
 
+'''
+Due to Session 0 isolation, program is unable to be run automatically using
+Task Scheduler and still get user input information
+using win32api.GetLastInputInfo.  There are no issues when running as user.
+'''
 
 class Idle_Usage_Checker:
 
@@ -90,7 +95,7 @@ class Idle_Usage_Checker:
 
             self.logger.info(
                 f"Entering sleep mode... "
-                "({self.SLEEP_MODE_LENGTH/60} minutes)")
+                f"({self.SLEEP_MODE_LENGTH/60} minutes)")
             self.ELAPSED_TIME += self.SLEEP_MODE_LENGTH
             sleep(self.SLEEP_MODE_LENGTH)
 
