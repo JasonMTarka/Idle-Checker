@@ -10,7 +10,7 @@ from time import sleep
 '''
 Due to Session 0 isolation, program is unable to be run automatically using
 Task Scheduler and still get user input information
-using win32api.GetLastInputInfo.  There are no issues when running as user.
+using win32api.GetLastInputInfo.  There are no issues when running manually.
 '''
 
 class Idle_Usage_Checker:
