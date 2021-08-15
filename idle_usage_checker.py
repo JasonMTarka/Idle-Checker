@@ -4,13 +4,14 @@ import psutil
 import win32api
 import boto3
 import logging
-
 from time import sleep
+
+from config import config
 
 '''
 Due to Session 0 isolation, program is unable to be run automatically using
-Task Scheduler and still get user input information
-using win32api.GetLastInputInfo.  There are no issues when running manually.
+Task Scheduler and still get user input information using
+win32api.GetLastInputInfo.  There are no issues when running manually.
 '''
 
 class Idle_Usage_Checker:
@@ -48,41 +49,15 @@ class Idle_Usage_Checker:
         self.logger = logger_setup()
         self.last_action = win32api.GetLastInputInfo()
 
-        self.ELAPSED_TIME = 0
-        # Rough elapsed time the program has been running
-        self.RUNNING_DURATION = 60 * 60 * 4  # (seconds * minutes * hours)
-        # Total allowed running length of program; incremented by sleep_mode
-        self.SLEEP_MODE_LENGTH = 60 * 6
-        # (seconds * minutes) - Duration of Sleep Mode between resource check
-
-        self.CPU_THRESHOLD = 30
-        # Maximum for acceptable CPU usage, in %
-        self.MEMORY_THRESHOLD = 55
-        # Maximum for acceptable RAM usage, in %
-        self.RESOURCE_CHECKS = 3
-        # Number of resource checks required to determine heavy usage
-        self.RESOURCE_CHECK_INTERVAL = 3
-        # Number of seconds between resource checks
-        self.MAX_RESOURCE_CHECKS = 10
-        # Failsafe value in case checks keep returning active/inactive
-        self.MAX_PASSED_CHECKS = 3
-        # Number of passed resource checks allowed before terminating program
-
-        self.PRESENCE_WAIT_TIME = 60
-        # Number of seconds between presence checks
-        self.PRESENCE_CHECK_COUNT = 12
-        # Number of checks for user presence;
-        # With PRESENCE_WAIT_TIME of 60, 15 checks = 15 minutes
-
         if self.debug:
             # Set some constant values for debugging purposes
 
-            self.RUNNING_DURATION = 30
-            self.SLEEP_MODE_LENGTH = 5
-            self.CPU_THRESHOLD = 10
-            self.RESOURCE_CHECK_INTERVAL = 1
-            self.PRESENCE_WAIT_TIME = 1
-            self.PRESENCE_CHECK_COUNT = 3
+            config["RUNNING_DURATION"] = 30
+            config["SLEEP_MODE_LENGTH"] = 5
+            config["CPU_THRESHOLD"] = 10
+            config["RESOURCE_CHECK_INTERVAL"] = 1
+            config["PRESENCE_WAIT_TIME"] = 1
+            config["PRESENCE_CHECK_COUNT"] = 3
 
         self.logger.info("**********")
         self.logger.info("Initial setup complete.")
@@ -95,9 +70,10 @@ class Idle_Usage_Checker:
 
             self.logger.info(
                 f"Entering sleep mode... "
-                f"({self.SLEEP_MODE_LENGTH/60} minutes)")
-            self.ELAPSED_TIME += self.SLEEP_MODE_LENGTH
-            sleep(self.SLEEP_MODE_LENGTH)
+                f"({config['SLEEP_MODE_LENGTH']/60} minutes)"
+            )
+            config["ELAPSED_TIME"] += config["SLEEP_MODE_LENGTH"]
+            sleep(config["SLEEP_MODE_LENGTH"])
 
         if self.debug:
             self.logger.info("***** Debugging Mode *****")
@@ -105,7 +81,7 @@ class Idle_Usage_Checker:
         self.logger.info("Beginning main loop.")
         total_passed_resource_checks = 0
 
-        while self.ELAPSED_TIME <= self.RUNNING_DURATION:
+        while config["ELAPSED_TIME"] <= config["RUNNING_DURATION"]:
             self.logger.info("Checking for user presence...")
 
             if not self.presence():
@@ -118,7 +94,7 @@ class Idle_Usage_Checker:
                 else:
                     total_passed_resource_checks += 1
 
-                    if total_passed_resource_checks >= self.MAX_PASSED_CHECKS:
+                    if total_passed_resource_checks >= config["MAX_PASSED_CHECKS"]:
                         self.close_program(
                             message=("Total passed resource checks have "
                                      "reached allowed maximum."))
@@ -155,15 +131,15 @@ class Idle_Usage_Checker:
         total_checks = 0
         self.logger.info("Starting resource checks...")
 
-        while (resource_counter < self.RESOURCE_CHECKS
-               and resource_counter > -self.RESOURCE_CHECKS
-               and total_checks < self.MAX_RESOURCE_CHECKS):
+        while (resource_counter < config["RESOURCE_CHECKS"]
+               and resource_counter > - config["RESOURCE_CHECKS"]
+               and total_checks < config["MAX_RESOURCE_CHECKS"]):
 
-            sleep(self.RESOURCE_CHECK_INTERVAL)
+            sleep(config['RESOURCE_CHECK_INTERVAL'])
             self.update_resources()
 
-            if (self.cpu >= self.CPU_THRESHOLD
-                    or self.memory >= self.MEMORY_THRESHOLD):
+            if (self.cpu >= config["CPU_THRESHOLD"]
+                    or self.memory >= config["MEMORY_THRESHOLD"]):
                 verb = "are"
                 resource_counter += 1
                 total_checks += 1
@@ -175,14 +151,14 @@ class Idle_Usage_Checker:
 
             self.logger.debug(f"Resources {verb} being heavily utilized. "
                               "(Allowed CPU usage: "
-                              f"{self.CPU_THRESHOLD}%, "
+                              f"{config['CPU_THRESHOLD']}%, "
                               "Allowed RAM usage: "
-                              f"{self.MEMORY_THRESHOLD}"
+                              f"{config['MEMORY_THRESHOLD']}"
                               "%)")
 
         total_checks_msg = f"(Total number of checks: {total_checks})"
 
-        if resource_counter >= self.RESOURCE_CHECKS:
+        if resource_counter >= config["RESOURCE_CHECKS"]:
             # Case of heavy resource usage
 
             self.logger.warning(
@@ -190,7 +166,7 @@ class Idle_Usage_Checker:
                 f"{total_checks_msg}")
             return True
 
-        elif resource_counter <= -self.RESOURCE_CHECKS:
+        elif resource_counter <= -config["RESOURCE_CHECKS"]:
             # Case of light resource usage
 
             self.logger.info(
@@ -198,7 +174,7 @@ class Idle_Usage_Checker:
                 f"{total_checks_msg}")
             return False
 
-        elif total_checks >= self.MAX_RESOURCE_CHECKS:
+        elif total_checks >= config["MAX_RESOURCE_CHECKS"]:
             # Total number of checks exceeded
 
             self.logger.warning(
@@ -217,14 +193,14 @@ class Idle_Usage_Checker:
     def presence(self) -> bool:
         """Check for user presence."""
 
-        for _ in range(self.PRESENCE_CHECK_COUNT):
+        for _ in range(config["PRESENCE_CHECK_COUNT"]):
 
             new_action = win32api.GetLastInputInfo()
             if new_action != self.last_action:
                 self.logger.info("Activity detected.")
                 self.last_action = new_action
                 return True
-            sleep(self.PRESENCE_WAIT_TIME)
+            sleep(config["PRESENCE_WAIT_TIME"])
 
         self.logger.info("User does not seem to be present.")
         return False
@@ -252,7 +228,7 @@ class Idle_Usage_Checker:
                     f"Your CPU usage was recorded at {self.cpu}% "
                     f"and your RAM usage was recorded at {self.memory}%. "
                     "Allowed maximums: "
-                    f"CPU: {self.CPU_THRESHOLD}% RAM: {self.MEMORY_THRESHOLD}%"
+                    f"CPU: {config['CPU_THRESHOLD']}% RAM: {config['MEMORY_THRESHOLD']}%"
                     " Did you leave a task running?"),
                 Subject="Idle Checker Notification",
             )
