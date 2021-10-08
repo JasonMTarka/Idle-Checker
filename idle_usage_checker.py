@@ -8,14 +8,14 @@ from time import sleep
 
 from config import config
 
-'''
+"""
 Due to Session 0 isolation, program is unable to be run automatically using
 Task Scheduler and still get user input information using
 win32api.GetLastInputInfo.  There are no issues when running manually.
-'''
+"""
+
 
 class Idle_Usage_Checker:
-
     def __init__(self, **kwargs) -> None:
         """Set instance constants and logger object."""
 
@@ -32,8 +32,9 @@ class Idle_Usage_Checker:
             logger.setLevel(level)
 
             formatter = logging.Formatter(
-                '%(asctime)s:%(levelname)s:%(name)s:%(message)s')
-            file_handler = logging.FileHandler('idle_usage_checker_logs.log')
+                "%(asctime)s:%(levelname)s:%(name)s:%(message)s"
+            )
+            file_handler = logging.FileHandler("idle_usage_checker_logs.log")
             file_handler.setFormatter(formatter)
 
             logger.addHandler(file_handler)
@@ -94,10 +95,16 @@ class Idle_Usage_Checker:
                 else:
                     total_passed_resource_checks += 1
 
-                    if total_passed_resource_checks >= config["MAX_PASSED_CHECKS"]:
+                    if (
+                        total_passed_resource_checks
+                        >= config["MAX_PASSED_CHECKS"]
+                    ):
                         self.close_program(
-                            message=("Total passed resource checks have "
-                                     "reached allowed maximum."))
+                            message=(
+                                "Total passed resource checks have "
+                                "reached allowed maximum."
+                            )
+                        )
                     sleep_mode()
             else:
                 total_passed_resource_checks = 0
@@ -119,10 +126,12 @@ class Idle_Usage_Checker:
 
         self.cpu, self.memory = (
             psutil.cpu_percent(interval=0.6),
-            psutil.virtual_memory().percent)
+            psutil.virtual_memory().percent,
+        )
         self.logger.debug(
             f"CPU usage is at {self.cpu}% and "
-            f"memory usage is at {self.memory}%.")
+            f"memory usage is at {self.memory}%."
+        )
 
     def resource_utilization(self) -> bool:
         """Check for resource utilization."""
@@ -131,15 +140,19 @@ class Idle_Usage_Checker:
         total_checks = 0
         self.logger.info("Starting resource checks...")
 
-        while (resource_counter < config["RESOURCE_CHECKS"]
-               and resource_counter > - config["RESOURCE_CHECKS"]
-               and total_checks < config["MAX_RESOURCE_CHECKS"]):
+        while (
+            resource_counter < config["RESOURCE_CHECKS"]
+            and resource_counter > -config["RESOURCE_CHECKS"]
+            and total_checks < config["MAX_RESOURCE_CHECKS"]
+        ):
 
-            sleep(config['RESOURCE_CHECK_INTERVAL'])
+            sleep(config["RESOURCE_CHECK_INTERVAL"])
             self.update_resources()
 
-            if (self.cpu >= config["CPU_THRESHOLD"]
-                    or self.memory >= config["MEMORY_THRESHOLD"]):
+            if (
+                self.cpu >= config["CPU_THRESHOLD"]
+                or self.memory >= config["MEMORY_THRESHOLD"]
+            ):
                 verb = "are"
                 resource_counter += 1
                 total_checks += 1
@@ -149,12 +162,14 @@ class Idle_Usage_Checker:
                 resource_counter -= 1
                 total_checks += 1
 
-            self.logger.debug(f"Resources {verb} being heavily utilized. "
-                              "(Allowed CPU usage: "
-                              f"{config['CPU_THRESHOLD']}%, "
-                              "Allowed RAM usage: "
-                              f"{config['MEMORY_THRESHOLD']}"
-                              "%)")
+            self.logger.debug(
+                f"Resources {verb} being heavily utilized. "
+                "(Allowed CPU usage: "
+                f"{config['CPU_THRESHOLD']}%, "
+                "Allowed RAM usage: "
+                f"{config['MEMORY_THRESHOLD']}"
+                "%)"
+            )
 
         total_checks_msg = f"(Total number of checks: {total_checks})"
 
@@ -162,16 +177,16 @@ class Idle_Usage_Checker:
             # Case of heavy resource usage
 
             self.logger.warning(
-                "Computer has failed resource checks. "
-                f"{total_checks_msg}")
+                "Computer has failed resource checks. " f"{total_checks_msg}"
+            )
             return True
 
         elif resource_counter <= -config["RESOURCE_CHECKS"]:
             # Case of light resource usage
 
             self.logger.info(
-                "Computer has passed resource checks. "
-                f"{total_checks_msg}")
+                "Computer has passed resource checks. " f"{total_checks_msg}"
+            )
             return False
 
         elif total_checks >= config["MAX_RESOURCE_CHECKS"]:
@@ -179,7 +194,8 @@ class Idle_Usage_Checker:
 
             self.logger.warning(
                 "Computer has reached maximum number of allowed checks. "
-                f"{total_checks_msg}")
+                f"{total_checks_msg}"
+            )
             return False
 
         else:
@@ -187,7 +203,8 @@ class Idle_Usage_Checker:
 
             self.logger.error(
                 "An unknown error has occured in resource checks. "
-                f"{total_checks_msg}")
+                f"{total_checks_msg}"
+            )
             return False
 
     def presence(self) -> bool:
@@ -213,23 +230,22 @@ class Idle_Usage_Checker:
         if not self.debug:
             client = boto3.client(
                 "sns",
-                aws_access_key_id=os.environ.get(
-                    "AWS-Python-Access-Key-ID"),
+                aws_access_key_id=os.environ.get("AWS-Python-Access-Key-ID"),
                 aws_secret_access_key=os.environ.get(
-                    "AWS-Python-Secret-Access-Key"),
-                region_name=os.environ.get(
-                    "AWS-Region")
+                    "AWS-Python-Secret-Access-Key"
+                ),
+                region_name=os.environ.get("AWS-Region"),
             )
 
             client.publish(
-                TopicArn=os.environ.get(
-                    "AWS-Python-Idle-Checker-TopicArn"),
+                TopicArn=os.environ.get("AWS-Python-Idle-Checker-TopicArn"),
                 Message=(
                     f"Your CPU usage was recorded at {self.cpu}% "
                     f"and your RAM usage was recorded at {self.memory}%. "
                     "Allowed maximums: "
                     f"CPU: {config['CPU_THRESHOLD']}% RAM: {config['MEMORY_THRESHOLD']}%"
-                    " Did you leave a task running?"),
+                    " Did you leave a task running?"
+                ),
                 Subject="Idle Checker Notification",
             )
 
@@ -253,13 +269,15 @@ def main() -> None:
                     "'Idle Usage Checker' by Jason Tarka\n"
                     "Accepted command line arguments:\n"
                     '"-d" - Enter debugging mode\n'
-                    '"-v" - Display version information')
+                    '"-v" - Display version information'
+                )
                 sys.exit()
 
             if "-v" in opts or "--version" in opts:
                 print(
                     "Application version: 1.0.0\n"
-                    f"Python version: {sys.version}")
+                    f"Python version: {sys.version}"
+                )
                 sys.exit()
 
             if "-d" in opts or "--debug" in opts:
